@@ -10,7 +10,7 @@ Pour optimiser le temps de formation et nous concentrer sur l'utilisation de Kub
 1. Comprendre l'architecture qui a été déployée pour vous.
 2. Connecter votre outil de commande local (`kubectl`) au cluster.
 3. Accéder au **Dashboard Kubernetes** (interface web).
-4. Faire l'inventaire de ce qui est déjà installé (stockage, ingress) : les labs suivants s'en servent.
+4. Faire l'inventaire de ce qui est déjà installé (namespace, stockage...)
 
 ---
 
@@ -111,29 +111,5 @@ Exécutez le script `access-dashboard.sh`. Il génère un token d'authentificati
 
 Vous voilà sur l'interface. Naviguez et repérez : la liste des nœuds, les namespaces, les Pods du namespace `kube-system`.
 
-![Dashboard Kubernetes Headlamp](../../images/headlamp-dashboard.png)
+![Dashboard Kubernetes Headlamp](../images/headlamp-dashboard.png)
 
----
-
-## Partie 4 : Inventaire du cluster
-
-Deux composants installés dans le cluster seront utilisés plus tard : une **StorageClass** (stockage persistant, Lab 6) et un **Ingress Controller** (publication HTTP, Lab 8). Retrouvez-les depuis le terminal.
-
-1. Listez les Pods de **tous** les namespaces. Quels namespaces voyez-vous ?
-2. Quelle(s) StorageClass existe(nt) ? Laquelle est celle par défaut ?
-3. Quelle IngressClass existe ? Dans quel namespace tourne le contrôleur, et son Service a-t-il une `EXTERNAL-IP` ?
-
-<details><summary>Correction</summary>
-
-```bash
-kubectl get pods -A
-kubectl get storageclass          # la classe par défaut est suffixée par "(default)"
-kubectl get ingressclass
-kubectl get svc -n ingress-nginx  # colonne EXTERNAL-IP
-```
-
-Notez le nom de la StorageClass et l'EXTERNAL-IP du contrôleur d'Ingress.
-
-</details>
-
-> **État attendu en fin de lab :** `kubectl get nodes` montre 4 nœuds `Ready`, le Dashboard s'ouvre, et vous avez noté le nom de la StorageClass par défaut et l'IP du contrôleur d'Ingress.
