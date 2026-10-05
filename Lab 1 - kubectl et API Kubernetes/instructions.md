@@ -58,7 +58,7 @@ Pour voir uniquement la configuration du contexte actuel (version courte) :
 Faites :
 
 ```bash
-kubectl run pod-default
+kubectl run pod-default --image nginx
 kubectl get pods
 ```
 
@@ -67,7 +67,7 @@ Créer un nouveau namespace
 
 ```bash
 kubectl create namespace dev
-kubectl run pod-dev -n dev
+kubectl run pod-dev -n dev  --image nginx
 kubectl get pods
 ```
 
