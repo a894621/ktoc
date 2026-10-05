@@ -73,7 +73,7 @@ kubectl exec -it -n k8s-lab tools -- ping -c 3 <IP_WEBSERVER>
 
 ---
 
-## Partie 3 : Approche Déclarative (YAML)
+## Partie 2 : Approche Déclarative (YAML)
 
 Définissons les ressources dans des fichiers YAML pour l'approche "Infrastructure as Code".
 
@@ -94,7 +94,7 @@ kubectl get pods -n k8s-lab
 
 ---
 
-## Partie 4 : Labels, Selectors et Annotations
+## Partie 3 : Labels, Selectors et Annotations
 
 Les **Labels** organisent les objets K8s et les **Selectors** permettent de les filtrer.
 
@@ -187,7 +187,7 @@ kubectl describe pod -n dev nginx1
 
 ---
 
-## Partie 5 : Ordonnancement avec NodeSelector
+## Partie 4 : Ordonnancement avec NodeSelector
 
 Utilisons les labels pour orienter le placement d'un Pod sur un nœud précis.
 
@@ -237,7 +237,7 @@ kubectl get pod pod-ssd -n dev -o wide
 
 ---
 
-## Partie 6 : Nettoyage des Ressources
+## Partie 5 : Nettoyage des Ressources
 
 **1. Suppression ciblée**
 
