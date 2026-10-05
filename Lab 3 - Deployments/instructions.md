@@ -98,7 +98,7 @@ kubectl create deployment webapp --image=public.ecr.aws/wizetraining/webapp-coun
 
 **2.** Modifiez le fichier pour obtenir : replicas `3`, label `app: webapp` (sur le Deployment, le selector et le template), conteneur nommé `webapp`, `containerPort: 5000`. Quelle règle lie `selector.matchLabels` et `template.metadata.labels` ?
 
-details><summary>Correction</summary>
+<details><summary>Correction</summary>
 
 ```yaml
 apiVersion: apps/v1
