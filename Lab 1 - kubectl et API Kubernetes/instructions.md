@@ -115,7 +115,7 @@ Lister les Pods contenus dans le namespace `kube-system`.
 <details><summary>Correction</summary>
 
 ```bash
-# On force le namespace kube-system car notre contexte est maintenant sur "dev"
+# On force le namespace kube-system car notre contexte nous listerait les Pods dans le namespace "default"
 kubectl get pods -n kube-system 
 ```
 </details>
