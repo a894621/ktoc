@@ -221,7 +221,7 @@ kubectl scale deployment webapp --replicas=2
 
 **1.** Créez le dossier `~/labs/countvisit` : vous y rangerez tous les manifestes de l'application. Générez-y le YAML du Deployment (`--dry-run=client -o yaml`) dans `webapp-deployment.yaml`.
 
-details><summary>Correction</summary>
+<details><summary>Correction</summary>
 
 ```bash
 mkdir -p ~/labs/countvisit && cd ~/labs/countvisit
