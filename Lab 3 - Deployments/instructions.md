@@ -13,6 +13,142 @@
 
 **L'application :** image `public.ecr.aws/wizetraining/webapp-count:v1`, port **5000** (voir la fiche dans le [README](../README.md)). Sans base de données, elle affiche "Échec de connexion" : c'est normal pour ce lab, la base arrive au Lab 4.
 
+### Le code de l'application est ci-dessous :
+
+<details><summary>Code Webapp-Count v1</summary>
+
+```python
+import time
+import socket
+import logging
+import json
+import os
+import psycopg2
+from flask import Flask, Response
+
+app = Flask(__name__)
+
+# Configuration des logs pour voir l'activité en temps réel
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# Paramètres de connexion PostgreSQL (Docker Compose résoudra le hostname 'postgres')
+PG_HOST = os.getenv('PG_HOST', 'postgres')
+PG_PORT = os.getenv('PG_PORT', '5432')
+PG_USER = os.getenv('PG_USER', 'postgres')
+PG_PASSWORD = os.getenv('PG_PASSWORD', 'postgres')
+PG_DB = os.getenv('PG_DB', 'postgres')
+
+def stream_connection_and_count():
+    """
+    Générateur Server-Sent Events (SSE).
+    Tente de se connecter à PostgreSQL, incrémente le compteur, et envoie 
+    l'état en temps réel au navigateur ainsi qu'aux logs.
+    """
+    retries = 5
+    while True:
+        # 1. On log en console et on notifie le navigateur de la tentative
+        logging.info(f"Tentative de connexion à PostgreSQL (Essais restants : {retries})...")
+        yield f"data: {json.dumps({'status': 'loading', 'message': f'Recherche de la base de données... ({retries} essais restants)'})}\n\n"
+        
+        try:
+            # 2. Tentative de connexion
+            conn = psycopg2.connect(
+                host=PG_HOST, port=PG_PORT, user=PG_USER, password=PG_PASSWORD, dbname=PG_DB,
+                connect_timeout=2
+            )
+            conn.autocommit = True
+            with conn.cursor() as cur:
+                # On s'assure que la table existe
+                cur.execute("CREATE TABLE IF NOT EXISTS hits (id serial PRIMARY KEY, count integer);")
+                # On insère la ligne si elle n'existe pas, sinon on l'incrémente
+                cur.execute("INSERT INTO hits (id, count) VALUES (1, 1) ON CONFLICT (id) DO UPDATE SET count = hits.count + 1 RETURNING count;")
+                count = cur.fetchone()[0]
+            conn.close()
+
+            # 3. Succès ! On notifie les logs et le navigateur
+            logging.info(f"Connexion réussie ! Visiteur n°{count}")
+            yield f"data: {json.dumps({'status': 'success', 'count': count, 'message': 'Connecté à la base de données'})}\n\n"
+            break
+
+        except psycopg2.OperationalError as exc:
+            # 4. Echec de la tentative
+            if retries == 0:
+                logging.error("Échec critique : Impossible de joindre PostgreSQL.")
+                yield f"data: {json.dumps({'status': 'error', 'message': 'Echec de connexion à la base de données'})}\n\n"
+                break
+            retries -= 1
+            # Pause pour éviter de spammer et pour laisser le temps de voir l'animation côté navigateur
+            time.sleep(1.5)
+
+@app.route('/stream')
+def stream():
+    """Route asynchrone qui envoie les événements au navigateur en temps réel."""
+    return Response(stream_connection_and_count(), mimetype='text/event-stream')
+
+@app.route('/')
+def hello():
+    # L'affichage du HTML est IMMÉDIAT. Il n'y a plus de code bloquant ici.
+    hostname = socket.gethostname()
+
+    html_response = f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Compteur de Visites</title>
+        <style>
+            body {{ font-family: sans-serif; text-align: center; margin-top: 50px; }}
+            .container {{ padding: 20px; border: 1px solid #ccc; border-radius: 8px; display: inline-block; }}
+            .hostname {{ font-size: 0.9em; color: #555; margin-top: 20px; }}
+            .db-status {{ margin-top: 15px; font-size: 1.1em; }}
+            /* Effet visuel clignotant pour le fun */
+            .blinking {{ animation: blinker 1s linear infinite; color: #ff9800; font-weight: bold; }}
+            @keyframes blinker {{ 50% {{ opacity: 0; }} }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Bonjour !</h1>
+            
+            <p>Vous êtes le visiteur numéro <strong id="count-display">...</strong>.</p>
+            <div class="hostname">Vous êtes sur le conteneur : {hostname}</div>
+            <div class="db-status" id="db-status-display"><span class="blinking">Initialisation de la connexion... 📡</span></div>
+        </div>
+
+        <script>
+            // Connexion à la route SSE pour recevoir les événements Python en direct
+            const source = new EventSource('/stream');
+            
+            source.onmessage = function(event) {{
+                const data = JSON.parse(event.data);
+                const statusDisplay = document.getElementById('db-status-display');
+                const countDisplay = document.getElementById('count-display');
+                
+                if (data.status === 'loading') {{
+                    statusDisplay.innerHTML = '<span class="blinking">' + data.message + ' 📡</span>';
+                }} else if (data.status === 'success') {{
+                    statusDisplay.innerHTML = '<strong style="color:green;">' + data.message + '</strong>';
+                    countDisplay.innerText = data.count;
+                    source.close(); // Le travail est terminé, on ferme la connexion
+                }} else if (data.status === 'error') {{
+                    statusDisplay.innerHTML = '<span style="color:red;">' + data.message + '</span>';
+                    countDisplay.innerText = 'N/A';
+                    source.close();
+                }}
+            }};
+        </script>
+    </body>
+    </html>
+    """
+    return html_response
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
+```
+
+</details>
+
 ---
 
 ## Partie 1 : Premier Deployment en mode impératif
@@ -177,7 +313,7 @@ kubectl annotate deployment webapp kubernetes.io/change-cause="Version initiale 
 
 ```bash
 # 3
-kubectl set image deployment/webapp webapp=public.ecr.aws/wizetraining/webapp-count:v2
+kubectl set image deployment/webapp webapp-count=public.ecr.aws/wizetraining/webapp-count:v2
 kubectl annotate deployment webapp kubernetes.io/change-cause="Passage en v2" --overwrite
 kubectl rollout status deployment/webapp
 kubectl get rs
@@ -205,7 +341,7 @@ kubectl rollout undo deployment webapp --to-revision=1 # ou à une révision pr�
 
 ```bash
 # 5
-kubectl set image deployment/webapp webapp=public.ecr.aws/wizetraining/webapp-count:v999
+kubectl set image deployment/webapp webapp-count=public.ecr.aws/wizetraining/webapp-count:v999
 kubectl get pods                    # nouveaux Pods en ErrImagePull / ImagePullBackOff
 kubectl rollout status deployment/webapp --timeout=30s   # bloqué
 kubectl describe pod <pod-en-erreur> | tail
